@@ -1,0 +1,34 @@
+EyeTheia shirt image sample
+Source: https://github.com/lightly-ai/dataset_clothing_images
+Repository license: CC0-1.0 (verify source license before reuse)
+
+shirt_001.jpg	shirt/c560e383-7599-4112-b2d3-482c38aa51e3.jpg
+shirt_002.jpg	shirt/1d2e0956-07d7-41d8-9286-ea98d1d32dbd.jpg
+shirt_003.jpg	shirt/00143901-a14c-4600-960f-7747b4a3a8cd.jpg
+shirt_004.jpg	shirt/e3f59ab5-daa0-4acf-a114-c6fae6afef56.jpg
+shirt_005.jpg	shirt/328e21ed-2843-4469-a49d-4c01470dc98d.jpg
+shirt_006.jpg	shirt/31315e30-2742-4f7f-8168-10a0645d2163.jpg
+shirt_007.jpg	shirt/ea0cfac2-165d-45ab-a87d-b34b7b1bdf87.jpg
+shirt_008.jpg	shirt/235230d6-8a23-4981-bc43-5e62c0570f44.jpg
+shirt_009.jpg	shirt/eff90bf7-9cfc-48f2-ad96-d4638e336da1.jpg
+shirt_010.jpg	shirt/a85064d6-0f5d-4fce-9e3a-d1b5902c6098.jpg
+shirt_011.jpg	t-shirt/16f1fbdf-d339-40f6-aecb-e55199db7a96.jpg
+shirt_012.jpg	t-shirt/f84f31e8-449e-41e4-aab8-f874ac1ff31f.jpg
+shirt_013.jpg	t-shirt/a5e1addc-13cf-4d7e-be46-dfefa23beee4.jpg
+shirt_014.jpg	t-shirt/09cd8fdf-bbe9-4908-8f54-f399bc635c9b.jpg
+shirt_015.jpg	t-shirt/099de1d5-7422-4230-b11b-fe581139b82c.jpg
+shirt_016.jpg	t-shirt/fd815439-7fee-40c7-8175-2f32596eb578.jpg
+shirt_017.jpg	t-shirt/3972b4a1-41b6-4333-8f65-e6a776e94e18.jpg
+shirt_018.jpg	t-shirt/47533149-1373-4576-9d70-8b4bf33a687c.jpg
+shirt_019.jpg	t-shirt/b84c9f00-8738-49a7-b804-bb8c685a12f7.jpg
+shirt_020.jpg	t-shirt/f8b7bdad-76ce-4efc-a26c-6a9d625d91fe.jpg
+shirt_021.jpg	longsleeve/c4c88f65-413e-4e4d-95ce-d8b7670b6d5f.jpg
+shirt_022.jpg	longsleeve/42c30a48-5e35-4117-847d-66cad1383955.jpg
+shirt_023.jpg	longsleeve/edbba7a3-a097-4caa-9314-d3a1de8975d0.jpg
+shirt_024.jpg	longsleeve/e43d8c8e-bad5-4497-abe3-88a6762bb9f0.jpg
+shirt_025.jpg	longsleeve/eb094af6-3106-48a1-9ccf-0fff46012d86.jpg
+shirt_026.jpg	longsleeve/b515791b-ed22-4eae-9092-234b59f03034.jpg
+shirt_027.jpg	longsleeve/87846aa9-86cc-404a-af2c-7e8fe941081d.jpg
+shirt_028.jpg	longsleeve/461a97c1-1738-46f8-9318-efff65d642a0.jpg
+shirt_029.jpg	longsleeve/9cb4943a-cf4b-467e-b39e-e4694d498fb2.jpg
+shirt_030.jpg	longsleeve/cbb2e29f-ac73-408c-834c-3c8ae1bd0ac7.jpg
