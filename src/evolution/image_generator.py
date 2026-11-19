@@ -25,10 +25,21 @@ from typing import Sequence
 
 import os
 import logging
+import time
+
+from matplotlib.pylab import positive
 
 from dotenv import load_dotenv
 from google import genai
 from PIL import Image
+
+try:
+    from evolution.genotype import decode_genotype, ATTRIBUTE_DESCRIPTIONS
+except ImportError:
+    from .genotype import decode_genotype, ATTRIBUTE_DESCRIPTIONS
+
+
+
 
 load_dotenv()
 
@@ -66,7 +77,7 @@ def load_client():
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = PROJECT_ROOT / "shopping_assets" / "offspring_dress.png"
 
-_PIPE = None
+
 
 
 def validate_genotype(genotype: Sequence[float]) -> list[float]:
@@ -86,117 +97,32 @@ def validate_genotype(genotype: Sequence[float]) -> list[float]:
     return values
 
 
-def _continuous_color_description(hue_gene: float) -> str:
-    """
-    Convert gene 1 to a continuously varying hue.
-    This does not choose the nearest entry from a fixed color-category list.
-    """
-    hue = hue_gene % 1.0
-    red, green, blue = colorsys.hsv_to_rgb(hue, 0.78, 0.88)
-    rgb = tuple(round(channel * 255) for channel in (red, green, blue))
-    hue_degrees = hue * 360.0
-    return (
-        f"a vivid, saturated garment color at hue {hue_degrees:.1f} degrees "
-        f"on the color wheel (RGB {rgb[0]}, {rgb[1]}, {rgb[2]})"
-    )
 
 
 def genotype_to_prompt(genotype: Sequence[float]) -> tuple[str, str]:
-    """
-    Turn the six continuous genes into a human-readable conditioning prompt.
+                """Decode the six genes into categories and describe them in text."""
+                values = validate_genotype(genotype)
+                decoded = decode_genotype(values)
 
-    Gene order:
-      1. color hue
-      2. sleeve coverage: 0 = sleeveless, 1 = full sleeves
-      3. neckline depth: 0 = high/closed, 1 = deep/open
-      4. garment length: 0 = mini, 1 = floor length
-      5. fittedness: 0 = loose, 1 = body-hugging
-      6. pattern density: 0 = plain, 1 = dense pattern
-    """
-    color, sleeve, neckline, length, fittedness, pattern = validate_genotype(genotype)
+                spec = "\n".join(
+                    f"- {feature}: {ATTRIBUTE_DESCRIPTIONS[feature][category]}"
+                    for feature, category in decoded.items()
+                )
 
-    sleeve_pct = sleeve * 100
-    neckline_pct = neckline * 100
-    length_pct = length * 100
-    fitted_pct = fittedness * 100
-    pattern_pct = pattern * 100
+                positive = f"""Design one complete women's fashion dress.
 
-    # Keep every control continuous: no nearest-category selection or bins.
-    sleeve_text = (
-        f"sleeve coverage set to {sleeve_pct:.1f}% "
-        "(0% means sleeveless and 100% means full-length sleeves)"
-    )
-    neckline_text = (
-        f"neckline openness set to {neckline_pct:.1f}% "
-        "(0% means a high closed neckline and 100% means a very deep open neckline)"
-    )
-    length_text = (
-        f"garment length set to {length_pct:.1f}% along a continuous "
-        "mini-length to floor-length scale"
-    )
-    fit_text = (
-        f"silhouette fittedness set to {fitted_pct:.1f}% "
-        "(0% means very loose and 100% means body-hugging)"
-    )
-    pattern_text = (
-        f"pattern density set to {pattern_pct:.1f}% "
-        "(0% means plain fabric and 100% means dense pattern coverage)"
-    )
+                GARMENT SPECIFICATION:
+                {spec}
 
-    positive = f"""
-                    Design one complete women's fashion dress.
+                VISUAL REQUIREMENTS:
+                Show the complete dress from the front, uncropped.
+                Use realistic fabric texture and natural garment construction.
+                Use a clean, light-grey studio background and even lighting.
+                Do not add text, watermarks, logos, or extra garments."""
 
-                    GARMENT SPECIFICATION:
-                    - Color: {_continuous_color_description(color)}
-                    - Sleeve coverage: {sleeve_pct:.1f}% 
-                    - Neckline openness: {neckline_pct:.1f}%
-                    - Length: {length_pct:.1f}% from mini to floor length
-                    - Fittedness: {fitted_pct:.1f}% from loose to body-hugging
-                    - Pattern density: {pattern_pct:.1f}%
-
-                    VISUAL REQUIREMENTS:
-                    Create a physically coherent, professionally tailored garment.
-                    Preserve the specified garment attributes.
-                    Show the complete dress from the front.
-                    Use realistic fabric texture and natural garment construction.
-                    Use a clean, light-grey studio background and even lighting.
-
-                    Do not add text, watermarks, logos, or extra garments.
-                    Do not crop the dress.
-                    """
-    
-
-    negative = ''
-    return positive, negative
+                return positive, ""
 
 
-def load_pipeline():
-    """Load the diffusion pipeline once and reuse it."""
-    global _PIPE
-    if _PIPE is not None:
-        return _PIPE
-
-    use_cuda = torch.cuda.is_available()
-    dtype = torch.float16 if use_cuda else torch.float32
-
-    pipe = StableDiffusionPipeline.from_pretrained(
-        BASE_MODEL_ID,
-        torch_dtype=dtype,
-        safety_checker=None,
-        requires_safety_checker=False,
-    )
-    pipe.load_lora_weights(LCM_LORA_ID)
-    pipe.fuse_lora()
-    pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-
-    if use_cuda:
-        # Sequential offload is slower but more suitable for a 4 GB GPU.
-        pipe.enable_sequential_cpu_offload()
-    else:
-        pipe.to("cpu")
-
-    _PIPE = pipe
-    return _PIPE
 
 
 
@@ -215,23 +141,15 @@ def generate_offspring_image(
     client = load_client()
 
     # Add parent images as visual references when provided.
-    contents = [
-        prompt,
-        (
-            "The following images are parent garment references. "
-            "Use them as visual inspiration, but create a new offspring "
-            "design that follows the specified child genotype. "
-            "Do not simply copy either parent."
-        )
-    ]
-
+    contents = [prompt]
     if parent_images:
+        contents.append("The following images are parent garment references. "
+            "Use them as inspiration, but create a new design that "
+            "follows the specified genotype.")
         for image_path in parent_images:
             image_path = Path(image_path)
-
             if not image_path.is_file():
                 raise FileNotFoundError(image_path)
-
             contents.append(Image.open(image_path).convert("RGB"))
 
     logger.info(
@@ -239,17 +157,26 @@ def generate_offspring_image(
         MODEL_ID, seed, len(parent_images or [])
     )
 
-    response = client.models.generate_content(
-        model=MODEL_ID,
-        contents=contents,
-    )
+    response = None
+    for attempt in range(1, 4):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_ID,
+                contents=contents,
+            )
+            break
+        except Exception as e:
+            logger.warning("Generation attempt %d failed: %s", attempt, e)
+            if attempt == 3:
+                raise
+            time.sleep(2 * attempt)
 
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     image_saved = False
 
-    for part in response.parts:
+    for part in (response.parts or []):
         if part.inline_data is not None:
             generated_image = part.as_image()
             generated_image.save(destination)

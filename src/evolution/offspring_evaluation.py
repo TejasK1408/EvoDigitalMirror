@@ -105,7 +105,7 @@ class OffspringEvaluator:
 
         # Prevent counting excessively long gaps caused by
         # tracking interruptions or application pauses.
-        self.max_sample_interval = 0.15
+        self.max_sample_interval = 0.3
 
         # --------------------------------------------------
         # SURVIVOR DATA
@@ -430,7 +430,17 @@ class OffspringEvaluator:
     # ==================================================
     # DRAW COMPARISON PANEL
     # ==================================================
-
+    def _fit(self, image, w, h):
+            """Resize keeping aspect ratio, centered on a dark card."""
+            canvas = np.full((h, w, 3), 35, dtype=np.uint8)
+            ih, iw = image.shape[:2]
+            s = min(w / iw, h / ih)
+            nw, nh = max(1, int(iw * s)), max(1, int(ih * s))
+            resized = cv2.resize(image, (nw, nh))
+            x0, y0 = (w - nw) // 2, (h - nh) // 2
+            canvas[y0:y0 + nh, x0:x0 + nw] = resized
+            return canvas
+    
     def render_panel(self):
 
         """
@@ -472,15 +482,8 @@ class OffspringEvaluator:
             image_height = self.cell_height - 55
             image_width = half_width - 12
 
-            parent_img = cv2.resize(
-                parent_img,
-                (image_width, image_height)
-            )
-
-            offspring_img = cv2.resize(
-                offspring_img,
-                (image_width, image_height)
-            )
+            parent_img = self._fit(parent_img, image_width, image_height)
+            offspring_img = self._fit(offspring_img, image_width, image_height)
 
             # Parent position.
             px = x_start + 4

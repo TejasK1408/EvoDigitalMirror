@@ -228,10 +228,12 @@ def display_genotype(dress_number, genotype):
         print(f"  {feature:12s}: {gene:.4f}")
 
 def decode_gene(feature, gene):
+    """Snap one continuous gene to the nearest category of its feature."""
     categories = FEATURE_SCHEMA[feature]
     values = generate_category_values(len(categories))
     best = min(range(len(categories)), key=lambda i: abs(values[i] - gene))
     return categories[best]
 
 def decode_genotype(genotype):
+    """Convert a six-gene list back into a {feature: category} dict."""
     return {f: decode_gene(f, g) for f, g in zip(FEATURE_SCHEMA, genotype)}

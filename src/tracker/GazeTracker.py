@@ -128,7 +128,8 @@ class GazeTracker:
 
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
 
-        self.model.load_state_dict(checkpoint['state_dict'], strict=False)
+        result = self.model.load_state_dict(checkpoint['state_dict'], strict=False)
+        print("[load] missing:", result.missing_keys, "| unexpected:", result.unexpected_keys)
         self.model.to(self.device)
         self.model.eval()
 
@@ -519,6 +520,7 @@ class GazeTracker:
 
         selection_finished = False
         selected_dresses = []
+        selected_image_paths = []
 
         GAP = 14
         HEADER_HEIGHT = 88
@@ -929,7 +931,10 @@ class GazeTracker:
                     break  # Exit the webcam loop after the results page closes.
         
         
-        
+                if not selection_finished:
+                        print("[EyeTheia] Gallery ended before selection finished. Exiting.")
+                        cv2.destroyAllWindows()
+                        return
         # ============================================================
         # STAGE 2: GENOTYPE FORMATION
         # ============================================================
@@ -992,10 +997,9 @@ class GazeTracker:
 
         for index, offspring_genotype in enumerate(offspring_population):
 
-            output_path = os.path.join(
-                asset_dir,
-                f"offspring_{index + 1}.png"
-            )
+            generated_dir = os.path.join(project_root, "generated_offspring")
+            os.makedirs(generated_dir, exist_ok=True)
+            output_path = os.path.join(generated_dir, f"gen1_offspring_{index + 1}.png")
 
             print(f"\nGenerating offspring {index + 1}...")
 
@@ -1024,12 +1028,19 @@ class GazeTracker:
 
         evaluator = OffspringEvaluator(
             parent_paths=selected_image_paths,
-            offspring_paths=offspring_image_paths
+            offspring_paths=offspring_image_paths,
+            screen_width=SCREEN_WIDTH,
+            screen_height=SCREEN_HEIGHT,
         )
 
         evaluator.start()
 
         EVALUATION_SECONDS = 60.0
+        eval_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True, max_num_faces=1)
+        self.reset_gaze_filters()      # filter timestamps are stale after generation
+        for _ in range(10):            # drop webcam frames buffered during generation
+            webcam.read()
+        start_time = time.perf_counter()
         evaluation_start = time.perf_counter()
 
         evaluation_window = "EyeTheia - Parent vs Offspring"
@@ -1039,6 +1050,7 @@ class GazeTracker:
             evaluation_window,
             cv2.WINDOW_NORMAL
         )
+        cv2.setWindowProperty(evaluation_window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         cv2.resizeWindow(
             evaluation_window,
@@ -1056,6 +1068,7 @@ class GazeTracker:
         print("[EyeTheia] Look at the parent or offspring designs.")
         print("[EyeTheia] Press Q to finish evaluation early.")
 
+        
         while time.perf_counter() - evaluation_start < EVALUATION_SECONDS:
 
             success, img = webcam.read()
@@ -1069,7 +1082,7 @@ class GazeTracker:
                 cv2.COLOR_BGR2RGB
             )
 
-            img_mp = face_mesh.process(img_rgb)
+            img_mp = eval_mesh.process(img_rgb)
 
             frame_valid = False
 
@@ -1186,7 +1199,10 @@ class GazeTracker:
                 print("[EyeTheia] Evaluation stopped manually.")
                 break
 
+        
         print("\n[EyeTheia] Gaze evaluation finished.")
+        eval_mesh.close()
+        print("Total dwell recorded:", round(sum(evaluator.dwell_times.values()), 2), "s")
 
         # ============================================================
         # STAGE 6: SURVIVOR SELECTION
@@ -1412,7 +1428,7 @@ class GazeTracker:
         cv2.destroyWindow(population_window)
         cv2.destroyWindow(evaluation_window)
 
-        cv2.destroyWindow(self.window_name)
-        cv2.destroyWindow("EyeTheia Controls")
+        cv2.destroyAllWindows()
+        
 
         print("\n========== GENERATION COMPLETED ==========")
